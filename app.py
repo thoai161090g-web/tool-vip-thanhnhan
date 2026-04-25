@@ -23,7 +23,6 @@ class BaccaratAlgo:
 def get_analysis():
     url = "https://api-bcr-thanhnhan.onrender.com/api/baccarat"
     try:
-        # Gọi tới API của bạn để lấy dữ liệu 26 bàn
         response = requests.get(url, timeout=10)
         data = response.json()
         
@@ -32,16 +31,31 @@ def get_analysis():
         all_results = []
         for item in data.get("data", []):
             table_id = item.get("table")
-            raw_res = item.get("result", "")
+            raw_res = item.get("result", "") # Đây là chuỗi full: "BTPBBP..."
             
-            # Chạy thuật toán cho từng bàn
-            algo = BaccaratAlgo(raw_res)
-            prediction = algo.predict_logic()
+            # --- PHẦN XỬ LÝ FULL DỮ LIỆU ---
+            # Chuyển chuỗi sang list số để thuật toán chạy
+            history_indices = []
+            for char in raw_res:
+                if char == 'P': history_indices.append(0)
+                elif char == 'B': history_indices.append(1)
+                # Nếu gặp 'T', thuật toán sẽ giữ nguyên nhịp cũ hoặc bỏ qua tùy bạn
+                # Ở đây ta lấy full P và B để không làm gãy cầu
+            
+            # Đếm tổng số ván thực tế (P + B + T)
+            total_rounds = len(raw_res) 
+            
+            # Đưa vào thuật toán của bạn
+            robot = BaccaratRobotAlgo(history_indices) 
+            prediction = robot.get_best_prediction()
             
             all_results.append({
                 "table": table_id,
-                "prediction": prediction,
-                "raw": raw_res[-5:] # Lấy 5 con cuối xem chơi
+                "total_rounds": total_rounds, # Hiển thị số ván
+                "prediction": prediction['prediction'],
+                "algorithm": prediction['algorithm'],
+                "confidence": prediction['confidence'],
+                "full_string": raw_res # Trả về chuỗi gốc để bạn đối chiếu
             })
         return all_results
     except Exception as e:
